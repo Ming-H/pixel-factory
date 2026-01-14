@@ -14,7 +14,7 @@ const IMAGE_STYLES = {
                 name: '人像摄影',
                 icon: '🧑',
                 description: '专业人像，柔和光感',
-                prompt: 'professional portrait photography, soft lighting, shallow depth of field, bokeh, Canon 85mm lens, natural skin tones',
+                prompt: '专业人像摄影，柔和光线，浅景深，背景虚化，佳能85mm镜头，自然肤色，高画质',
                 color: '#FF6B6B'
             },
             {
@@ -22,7 +22,7 @@ const IMAGE_STYLES = {
                 name: '风景摄影',
                 icon: '🏔️',
                 description: '广阔风景，HDR',
-                prompt: 'landscape photography, HDR, wide angle, dramatic lighting, golden hour, vibrant colors, sharp details',
+                prompt: '风景摄影，HDR高动态范围，广角镜头，戏剧性光线，黄金时刻，鲜艳色彩，锐利细节',
                 color: '#4ECDC4'
             },
             {
@@ -30,7 +30,7 @@ const IMAGE_STYLES = {
                 name: '微距摄影',
                 icon: '🔍',
                 description: '极致细节，背景虚化',
-                prompt: 'macro photography, extreme close-up, shallow depth of field, crystal clear details, blurred background',
+                prompt: '微距摄影，极近距离拍摄，浅景深，水晶般清晰细节，背景虚化，专业微距镜头',
                 color: '#95E1D3'
             },
             {
@@ -38,7 +38,7 @@ const IMAGE_STYLES = {
                 name: '街头摄影',
                 icon: '🌆',
                 description: '纪实风格，人文气息',
-                prompt: 'street photography, candid moment, urban atmosphere, documentary style, natural lighting',
+                prompt: '街头摄影，抓拍瞬间，都市氛围，纪实风格，自然光线，人文故事感',
                 color: '#F38181'
             },
             {
@@ -46,7 +46,7 @@ const IMAGE_STYLES = {
                 name: '商业摄影',
                 icon: '💎',
                 description: '产品展示，精细布光',
-                prompt: 'product photography, studio lighting, clean background, professional setup, sharp focus',
+                prompt: '商业产品摄影，影棚布光，干净背景，专业设备，精准对焦，高质感',
                 color: '#AA96DA'
             }
         ]
@@ -61,7 +61,7 @@ const IMAGE_STYLES = {
                 name: '油画风格',
                 icon: '🖼️',
                 description: '丰富色彩，笔触质感',
-                prompt: 'oil painting style, rich brushstrokes, classical art technique, vibrant colors, textured surface, museum quality',
+                prompt: '油画风格，丰富笔触，古典艺术技法，鲜艳色彩，纹理质感，博物馆级品质',
                 color: '#FFD93D'
             },
             {
@@ -69,7 +69,7 @@ const IMAGE_STYLES = {
                 name: '水彩风格',
                 icon: '💧',
                 description: '清新透明，晕染效果',
-                prompt: 'watercolor painting, soft edges, transparent layers, delicate colors, flowing gradients, paper texture',
+                prompt: '水彩画，柔和边缘，透明层叠，精致色彩，流动渐变，纸张纹理',
                 color: '#A8E6CF'
             },
             {
@@ -77,7 +77,7 @@ const IMAGE_STYLES = {
                 name: '素描风格',
                 icon: '✏️',
                 description: '铅笔线条，黑白质感',
-                prompt: 'pencil sketch, charcoal drawing, black and white, detailed shading, artistic linework',
+                prompt: '铅笔素描，炭笔绘画，黑白质感，精细阴影，艺术线条',
                 color: '#6C5B7B'
             },
             {
@@ -85,7 +85,7 @@ const IMAGE_STYLES = {
                 name: '印象派',
                 icon: '🌸',
                 description: '光色变化，莫奈风格',
-                prompt: 'impressionist painting style, Claude Monet, soft light, colorful brushstrokes, atmospheric perspective',
+                prompt: '印象派绘画风格，克劳德·莫奈，柔和光线，多彩笔触，大气透视感',
                 color: '#FFAAA5'
             },
             {
@@ -93,7 +93,7 @@ const IMAGE_STYLES = {
                 name: '超现实主义',
                 icon: '🌀',
                 description: '梦幻想象，达利风格',
-                prompt: 'surrealist art, Salvador Dali style, dreamlike atmosphere, impossible geometry, symbolic imagery',
+                prompt: '超现实主义艺术，萨尔瓦多·达利风格，梦幻氛围，不可能的几何，象征意象',
                 color: '#9B59B6'
             }
         ]
@@ -108,7 +108,7 @@ const IMAGE_STYLES = {
                 name: '日系动漫',
                 icon: '⛩️',
                 description: '经典日漫风格',
-                prompt: 'anime style, manga art, cel shading, vibrant colors, clean lines, Japanese animation aesthetic',
+                prompt: '日系动漫风格，漫画艺术，赛璐珞阴影，鲜艳色彩，干净线条，日本动画美学',
                 color: '#FF6B9D'
             },
             {
@@ -116,7 +116,7 @@ const IMAGE_STYLES = {
                 name: 'Q版可爱',
                 icon: '🧸',
                 description: '萌系Q版风格',
-                prompt: 'chibi style, cute proportions, large eyes, kawaii aesthetic, soft colors, adorable design',
+                prompt: 'Q版风格，可爱比例，大眼睛，卡哇伊美学，柔和色彩，萌系设计',
                 color: '#FFB6C1'
             },
             {
@@ -124,7 +124,7 @@ const IMAGE_STYLES = {
                 name: '吉卜力风格',
                 icon: '🏯',
                 description: '宫崎骏美学',
-                prompt: 'Studio Ghibli style, Hayao Miyazaki, hand-drawn aesthetic, serene atmosphere, lush colors, detailed backgrounds',
+                prompt: '吉卜力工作室风格，宫崎骏，手绘美学，宁静氛围，浓郁色彩，精致背景',
                 color: '#87CEEB'
             },
             {
@@ -132,7 +132,7 @@ const IMAGE_STYLES = {
                 name: '赛博动漫',
                 icon: '🤖',
                 description: '科技感动漫',
-                prompt: 'cyberpunk anime, neon lights, futuristic aesthetic, mechanical details, high contrast',
+                prompt: '赛博朋克动漫，霓虹灯光，未来主义美学，机械细节，高对比度',
                 color: '#00CED1'
             },
             {
@@ -140,7 +140,7 @@ const IMAGE_STYLES = {
                 name: '少女漫画',
                 icon: '🌸',
                 description: '浪漫柔美风格',
-                prompt: 'shojo manga style, romantic aesthetic, soft lines, sparkles, delicate features, pastel colors',
+                prompt: '少女漫画风格，浪漫美学，柔和线条，闪光效果，精致特征，粉彩色彩',
                 color: '#FFB7C5'
             }
         ]
@@ -155,7 +155,7 @@ const IMAGE_STYLES = {
                 name: '3D 渲染',
                 icon: '🎲',
                 description: '立体质感，精细建模',
-                prompt: '3D render, Octane render, ray tracing, subsurface scattering, photorealistic, high detail',
+                prompt: '3D渲染，Octane渲染，光线追踪，次表面散射，照片级真实感，高细节',
                 color: '#7F8C8D'
             },
             {
@@ -163,7 +163,7 @@ const IMAGE_STYLES = {
                 name: '像素艺术',
                 icon: '👾',
                 description: '复古像素风格',
-                prompt: 'pixel art, 16-bit style, retro gaming aesthetic, limited color palette, blocky design',
+                prompt: '像素艺术，16位风格，复古游戏美学，有限调色板，块状设计',
                 color: '#E74C3C'
             },
             {
@@ -171,7 +171,7 @@ const IMAGE_STYLES = {
                 name: '矢量插画',
                 icon: '📐',
                 description: '扁平简洁，几何美学',
-                prompt: 'vector illustration, flat design, clean lines, geometric shapes, minimalist aesthetic',
+                prompt: '矢量插画，扁平设计，干净线条，几何形状，极简主义美学',
                 color: '#3498DB'
             },
             {
@@ -179,7 +179,7 @@ const IMAGE_STYLES = {
                 name: '概念艺术',
                 icon: '🎭',
                 description: '游戏概念设计',
-                prompt: 'concept art, digital painting, fantasy art, detailed environment, dramatic composition',
+                prompt: '概念艺术，数字绘画，奇幻艺术，精致环境，戏剧性构图',
                 color: '#9B59B6'
             },
             {
@@ -187,7 +187,7 @@ const IMAGE_STYLES = {
                 name: '故障艺术',
                 icon: '📺',
                 description: '数字故障效果',
-                prompt: 'glitch art, digital distortion, RGB split, pixel sorting, cyberpunk aesthetic',
+                prompt: '故障艺术，数字失真，RGB分离，像素排序，赛博朋克美学',
                 color: '#00FF00'
             }
         ]
@@ -202,7 +202,7 @@ const IMAGE_STYLES = {
                 name: '极简主义',
                 icon: '⚪',
                 description: '简洁留白，克制冷感',
-                prompt: 'minimalist design, clean composition, negative space, simple shapes, monochromatic color scheme',
+                prompt: '极简设计，干净构图，负空间，简单形状，单色配色方案',
                 color: '#ECF0F1'
             },
             {
@@ -210,7 +210,7 @@ const IMAGE_STYLES = {
                 name: '赛博朋克',
                 icon: '🌃',
                 description: '霓虹未来，暗黑科技',
-                prompt: 'cyberpunk aesthetic, neon lights, dark atmosphere, futuristic city, holographic elements, high contrast',
+                prompt: '赛博朋克美学，霓虹灯光，黑暗氛围，未来都市，全息元素，高对比度',
                 color: '#E74C3C'
             },
             {
@@ -218,7 +218,7 @@ const IMAGE_STYLES = {
                 name: '蒸汽波',
                 icon: '🌴',
                 description: '复古未来，粉色美学',
-                prompt: 'vaporwave aesthetic, retro 80s, pastel pinks and purples, glitch effects, nostalgic atmosphere',
+                prompt: '蒸汽波美学，复古80年代，粉紫色调，故障效果，怀旧氛围',
                 color: '#FF69B4'
             },
             {
@@ -226,7 +226,7 @@ const IMAGE_STYLES = {
                 name: '包豪斯',
                 icon: '🔶',
                 description: '几何构成，经典设计',
-                prompt: 'Bauhaus style, geometric shapes, primary colors, functional design, grid-based composition',
+                prompt: '包豪斯风格，几何形状，原色，功能性设计，网格构图',
                 color: '#E67E22'
             },
             {
@@ -234,7 +234,7 @@ const IMAGE_STYLES = {
                 name: '装饰艺术',
                 icon: '💠',
                 description: '奢华典雅，流线造型',
-                prompt: 'Art Deco style, geometric patterns, gold accents, luxurious aesthetic, elegant curves',
+                prompt: '装饰艺术风格，几何图案，金色点缀，奢华美学，优雅曲线',
                 color: '#D4AF37'
             }
         ]
@@ -249,7 +249,7 @@ const IMAGE_STYLES = {
                 name: '黄金时刻',
                 icon: '🌅',
                 description: '温暖晨昏光',
-                prompt: 'golden hour lighting, warm tones, soft shadows, sun flare, magical atmosphere',
+                prompt: '黄金时刻光线，温暖色调，柔和阴影，太阳光晕，魔法氛围',
                 color: '#FFA500'
             },
             {
@@ -257,7 +257,7 @@ const IMAGE_STYLES = {
                 name: '蓝色时刻',
                 icon: '🌆',
                 description: '静谧蓝调光',
-                prompt: 'blue hour lighting, twilight blue, moody atmosphere, city lights, serene mood',
+                prompt: '蓝色时刻光线，暮光蓝，情绪氛围，城市灯光，宁静心情',
                 color: '#4682B4'
             },
             {
@@ -265,7 +265,7 @@ const IMAGE_STYLES = {
                 name: '霓虹灯光',
                 icon: '🌈',
                 description: '彩色霓虹效果',
-                prompt: 'neon lighting, vibrant colors, glow effects, nighttime atmosphere, electric aesthetic',
+                prompt: '霓虹灯光，鲜艳色彩，发光效果，夜间氛围，电子美学',
                 color: '#FF1493'
             },
             {
@@ -273,7 +273,7 @@ const IMAGE_STYLES = {
                 name: '电影光效',
                 icon: '🎬',
                 description: '戏剧性布光',
-                prompt: 'cinematic lighting, dramatic shadows, film noir aesthetic, moody atmosphere, professional lighting setup',
+                prompt: '电影级光线，戏剧性阴影，黑色电影美学，情绪氛围，专业灯光设置',
                 color: '#2C3E50'
             },
             {
@@ -281,7 +281,7 @@ const IMAGE_STYLES = {
                 name: '自然光线',
                 icon: '☀️',
                 description: '柔和自然光',
-                prompt: 'natural lighting, soft sunlight, organic feel, daylight, authentic atmosphere',
+                prompt: '自然光线，柔和阳光，有机质感，日光，真实氛围',
                 color: '#FFE4B5'
             }
         ]

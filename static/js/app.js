@@ -8,7 +8,9 @@ const state = {
     currentLightboxImage: null,
     currentPrompt: null,
     referenceImageData: null,
-    selectedStyle: null
+    selectedStyle: null,
+    selectedRatio: '1:1',
+    activeStyleCategory: null
 };
 
 // DOM 加载完成后初始化
@@ -18,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initTemplateButtons();
     initClearButtons();
     initImageUpload();
+    initSectionToggles();
     initWithStyleSelector();
     initSingleForm();
     initBatchForm();
@@ -27,12 +30,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 初始化标签切换
 function initTabs() {
-    const tabs = document.querySelectorAll('.tab');
+    const tabs = document.querySelectorAll('.nav-item');
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             // 移除所有 active 类
             tabs.forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.workspace-content').forEach(c => c.classList.remove('active'));
 
             // 添加 active 类
             tab.classList.add('active');
@@ -70,19 +73,50 @@ function initRatioSelector(container, inputId) {
             buttons.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             input.value = btn.dataset.ratio;
+            state.selectedRatio = btn.dataset.ratio;
+
+            // 自动添加宽高比到提示词末尾
+            addRatioToPrompt(state.selectedRatio);
         });
     });
 }
 
+// 添加宽高比到提示词
+function addRatioToPrompt(ratio) {
+    const promptTextarea = document.getElementById('prompt');
+    if (!promptTextarea) return;
+
+    const currentPrompt = promptTextarea.value.trim();
+
+    // 移除旧的宽高比标签（如果存在）
+    const ratioPattern = /\s*--ar\s+\d+:\d+\s*$/g;
+    const cleanedPrompt = currentPrompt.replace(ratioPattern, '').trim();
+
+    // 添加新的宽高比
+    promptTextarea.value = cleanedPrompt ? `${cleanedPrompt} --ar ${ratio}` : `--ar ${ratio}`;
+}
+
+// 更新宽高比显示（已弃用，保留用于兼容性）
+function updateRatioDisplay() {
+    // 不再需要显示更新，宽高比直接添加到提示词
+}
+
 // 初始化模板按钮
 function initTemplateButtons() {
-    const templateBtns = document.querySelectorAll('.template-btn');
+    const templateBtns = document.querySelectorAll('.template-chip');
     const promptTextarea = document.getElementById('prompt');
 
     templateBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const prompt = btn.dataset.prompt;
-            promptTextarea.value = prompt;
+            const currentPrompt = promptTextarea?.value.trim() || '';
+
+            if (currentPrompt) {
+                // 如果已有提示词，追加
+                promptTextarea.value = `${currentPrompt}, ${prompt}`;
+            } else {
+                promptTextarea.value = prompt;
+            }
             promptTextarea.focus();
             showToast('模板已应用', 'success');
         });
@@ -228,71 +262,103 @@ function clearImageUpload() {
     if (fileInput) fileInput.value = '';
 }
 
+// 初始化侧边栏折叠功能
+function initSectionToggles() {
+    const toggles = document.querySelectorAll('.section-toggle');
+    toggles.forEach(toggle => {
+        toggle.addEventListener('click', () => {
+            const targetId = toggle.dataset.target;
+            const section = toggle.closest('.sidebar-section');
+
+            if (targetId) {
+                const content = document.getElementById(targetId);
+                const isExpanded = toggle.classList.contains('expanded');
+
+                if (isExpanded) {
+                    toggle.classList.remove('expanded');
+                    section.classList.add('collapsed');
+                    if (content) content.style.display = 'none';
+                } else {
+                    toggle.classList.add('expanded');
+                    section.classList.remove('collapsed');
+                    if (content) content.style.display = '';
+                }
+            }
+        });
+    });
+}
+
 // 初始化风格选择器
 function initWithStyleSelector() {
-    const toggle = document.getElementById('style-toggle');
-    const selector = document.getElementById('style-selector');
-    const styleLabel = toggle?.querySelector('.style-label');
-    const categoriesContainer = document.getElementById('style-categories');
-    const optionsContainer = document.getElementById('style-options');
-    const removeBtn = document.getElementById('style-remove');
+    const workspaceContainer = document.getElementById('style-selector-workspace');
+    if (!workspaceContainer) return;
 
-    // 切换展开/收起
-    toggle?.addEventListener('click', () => {
-        toggle.classList.toggle('expanded');
-        selector?.classList.toggle('active');
-        if (styleLabel) {
-            styleLabel.textContent = toggle.classList.contains('expanded') ? '收起' : '展开';
-        }
-    });
+    // 创建横向标签布局
+    workspaceContainer.innerHTML = `
+        <div class="style-categories-tabs" id="style-categories-tabs"></div>
+        <div class="style-content-area" id="style-content-area"></div>
+    `;
 
-    // 渲染分类
-    if (categoriesContainer && typeof IMAGE_STYLES !== 'undefined') {
+    const tabsContainer = document.getElementById('style-categories-tabs');
+    const contentArea = document.getElementById('style-content-area');
+
+    // 渲染分类标签
+    if (tabsContainer && typeof IMAGE_STYLES !== 'undefined') {
         Object.entries(IMAGE_STYLES).forEach(([key, category], index) => {
-            const item = document.createElement('div');
-            item.className = 'style-category-item';
-            if (index === 0) item.classList.add('active');
-            item.innerHTML = `
-                <span class="category-icon">${category.icon}</span>
-                <span>${category.name}</span>
+            const tab = document.createElement('button');
+            tab.className = 'style-category-tab';
+            tab.type = 'button';
+            tab.dataset.category = key;
+            tab.innerHTML = `<span class="category-icon">${category.icon}</span>${category.name}`;
+            tabsContainer.appendChild(tab);
+
+            // 创建对应的内容区域
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'style-category-content';
+            contentDiv.dataset.category = key;
+            contentDiv.innerHTML = `
+                <div class="style-options-grid">
+                    ${category.styles.map(style => `
+                        <button type="button" class="style-option-chip ${state.selectedStyle?.id === style.id ? 'selected' : ''}"
+                                data-style-id="${style.id}"
+                                title="${style.description}">
+                            <span class="style-icon">${style.icon}</span>
+                            <span class="style-name">${style.name}</span>
+                        </button>
+                    `).join('')}
+                </div>
             `;
-            item.addEventListener('click', () => {
-                document.querySelectorAll('.style-category-item').forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
-                renderStyleOptions(key);
+            contentArea.appendChild(contentDiv);
+
+            // 点击标签切换
+            tab.addEventListener('click', () => {
+                // 移除所有 active
+                document.querySelectorAll('.style-category-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.style-category-content').forEach(c => c.classList.remove('active'));
+
+                // 激活当前
+                tab.classList.add('active');
+                contentDiv.classList.add('active');
+                state.activeStyleCategory = key;
             });
-            categoriesContainer.appendChild(item);
+
+            // 绑定风格选项点击事件
+            const styleChips = contentDiv.querySelectorAll('.style-option-chip');
+            styleChips.forEach(chip => {
+                chip.addEventListener('click', () => {
+                    const styleId = chip.dataset.styleId;
+                    selectStyle(styleId);
+                });
+            });
         });
 
-        // 默认显示第一个分类
-        if (Object.keys(IMAGE_STYLES).length > 0) {
-            renderStyleOptions(Object.keys(IMAGE_STYLES)[0]);
+        // 默认激活第一个分类
+        const firstTab = tabsContainer.querySelector('.style-category-tab');
+        if (firstTab) {
+            firstTab.classList.add('active');
+            const firstContent = contentArea.querySelector('.style-category-content');
+            if (firstContent) firstContent.classList.add('active');
         }
-    }
-
-    // 渲染风格选项
-    function renderStyleOptions(categoryKey) {
-        if (!optionsContainer) return;
-        const category = IMAGE_STYLES[categoryKey];
-        if (!category) return;
-
-        optionsContainer.innerHTML = category.styles.map(style => `
-            <div class="style-option-card ${state.selectedStyle?.id === style.id ? 'selected' : ''}"
-                 style="--style-color: ${style.color}"
-                 data-style-id="${style.id}">
-                <div class="style-icon">${style.icon}</div>
-                <div class="style-name">${style.name}</div>
-                <div class="style-desc">${style.description}</div>
-            </div>
-        `).join('');
-
-        // 绑定点击事件
-        optionsContainer.querySelectorAll('.style-option-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const styleId = card.dataset.styleId;
-                selectStyle(styleId);
-            });
-        });
     }
 
     // 选择风格
@@ -303,28 +369,106 @@ function initWithStyleSelector() {
         state.selectedStyle = style;
 
         // 更新 UI
-        document.querySelectorAll('.style-option-card').forEach(card => {
-            card.classList.toggle('selected', card.dataset.styleId === styleId);
+        document.querySelectorAll('.style-option-chip').forEach(chip => {
+            chip.classList.toggle('selected', chip.dataset.styleId === styleId);
         });
 
-        // 显示已选风格
-        const display = document.getElementById('selected-style-display');
-        const tag = display?.querySelector('.style-tag');
-        if (display) display.style.display = 'inline-flex';
-        if (tag) tag.textContent = `${style.icon} ${style.name}`;
+        // 填充提示词到输入框
+        const promptTextarea = document.getElementById('prompt');
+        const currentPrompt = promptTextarea?.value.trim() || '';
 
-        showToast(`已选择风格: ${style.name}`, 'success');
+        if (currentPrompt) {
+            // 如果已有提示词，询问用户如何处理
+            showPromptMergeDialog(currentPrompt, style);
+        } else {
+            // 如果没有提示词，直接填充风格提示词
+            if (promptTextarea) {
+                promptTextarea.value = style.prompt;
+                promptTextarea.focus();
+                showToast(`已填充风格提示词: ${style.name}`, 'success');
+            }
+        }
     }
 
-    // 移除风格
-    removeBtn?.addEventListener('click', () => {
-        state.selectedStyle = null;
-        document.querySelectorAll('.style-option-card').forEach(card => {
-            card.classList.remove('selected');
+    // 显示提示词合并选项对话框
+    function showPromptMergeDialog(currentPrompt, style) {
+        const dialog = document.getElementById('prompt-merge-dialog');
+        if (!dialog) return;
+
+        // 显示对话框
+        dialog.classList.add('active');
+
+        // 存储当前状态供按钮使用
+        window.promptMergeState = {
+            current: currentPrompt,
+            style: style
+        };
+
+        // 设置对话框按钮点击事件
+        const dialogBtns = dialog.querySelectorAll('.dialog-btn');
+        dialogBtns.forEach(btn => {
+            btn.onclick = () => {
+                const action = btn.dataset.action;
+                if (action && window.handlePromptMerge) {
+                    window.handlePromptMerge(action);
+                }
+            };
         });
-        const display = document.getElementById('selected-style-display');
-        if (display) display.style.display = 'none';
-    });
+
+        // 设置取消按钮
+        const cancelBtn = document.getElementById('dialog-cancel');
+        if (cancelBtn) {
+            cancelBtn.onclick = () => {
+                dialog.classList.remove('active');
+            };
+        }
+
+        // 点击背景关闭
+        dialog.addEventListener('click', (e) => {
+            if (e.target === dialog || e.target.classList.contains('dialog-overlay')) {
+                dialog.classList.remove('active');
+            }
+        });
+    }
+
+    // 处理提示词合并
+    window.handlePromptMerge = function(action) {
+        const { current, style } = window.promptMergeState || {};
+        const promptTextarea = document.getElementById('prompt');
+
+        if (!promptTextarea) return;
+
+        // 清理当前提示词中的宽高比标签（如果存在）
+        const ratioPattern = /\s*--ar\s+\d+:\d+\s*$/g;
+        const cleanedCurrent = current.replace(ratioPattern, '').trim();
+
+        let newPrompt = '';
+        switch (action) {
+            case 'replace':
+                newPrompt = style.prompt;
+                break;
+            case 'append':
+                newPrompt = `${cleanedCurrent}, ${style.prompt}`;
+                break;
+            case 'prepend':
+                newPrompt = `${style.prompt}, ${cleanedCurrent}`;
+                break;
+        }
+
+        promptTextarea.value = newPrompt;
+
+        // 如果有选中的宽高比，重新添加
+        if (state.selectedRatio) {
+            addRatioToPrompt(state.selectedRatio);
+        }
+
+        promptTextarea.focus();
+
+        // 关闭对话框
+        document.getElementById('prompt-merge-dialog')?.classList.remove('active');
+
+        showToast('提示词已更新', 'success');
+    };
 }
 
 // 单张生成表单
@@ -333,7 +477,7 @@ function initSingleForm() {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const prompt = document.getElementById('prompt').value.trim();
+        let prompt = document.getElementById('prompt').value.trim();
         const aspectRatio = document.getElementById('aspect-ratio').value;
         const resultDiv = document.getElementById('single-result');
 
@@ -341,6 +485,10 @@ function initSingleForm() {
             showToast('请输入提示词', 'error');
             return;
         }
+
+        // 移除提示词中的 --ar 标签（因为宽高比单独传递）
+        const ratioPattern = /\s*--ar\s+\d+:\d+\s*$/g;
+        prompt = prompt.replace(ratioPattern, '').trim();
 
         const submitBtn = form.querySelector('button[type="submit"]');
         setLoading(submitBtn, true);
@@ -356,14 +504,8 @@ function initSingleForm() {
         `;
 
         try {
-            // 构建完整提示词（整合风格）
-            let fullPrompt = prompt;
-            if (state.selectedStyle) {
-                fullPrompt = `${prompt}, ${state.selectedStyle.prompt}`;
-            }
-
             const requestBody = {
-                prompt: fullPrompt,
+                prompt: prompt,
                 aspect_ratio: aspectRatio
             };
 
