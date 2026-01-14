@@ -8,6 +8,9 @@ env/
 venv/
 ENV/
 .venv
+*.egg-info/
+dist/
+build/
 
 # 环境变量
 .env
