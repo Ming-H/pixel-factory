@@ -490,18 +490,45 @@ function initSingleForm() {
         const ratioPattern = /\s*--ar\s+\d+:\d+\s*$/g;
         prompt = prompt.replace(ratioPattern, '').trim();
 
-        const submitBtn = form.querySelector('button[type="submit"]');
+        // 查找生成按钮（在侧边栏中）
+        const submitBtn = document.querySelector('.btn-generate');
+        if (!submitBtn) {
+            showToast('找不到生成按钮', 'error');
+            return;
+        }
+
         setLoading(submitBtn, true);
+
+        // 显示生成进度
         resultDiv.innerHTML = `
-            <div class="result-image" style="aspect-ratio: ${getAspectRatioDecimal(aspectRatio)}">
-                <div class="loading-pulse" style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);">
-                    <div style="text-align: center;">
-                        <div style="font-size: 2rem; margin-bottom: 12px;">✨</div>
-                        <div>正在生成图片...</div>
+            <div class="generation-progress">
+                <div class="progress-header">
+                    <div class="progress-icon">✨</div>
+                    <div class="progress-text">正在生成图片...</div>
+                    <div class="progress-subtext">AI 正在精心创作，请稍候</div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
                     </div>
                 </div>
             </div>
         `;
+
+        // 启动进度条动画
+        const progressFill = resultDiv.querySelector('.progress-fill');
+        if (progressFill) {
+            progressFill.style.width = '0%';
+            setTimeout(() => {
+                progressFill.style.width = '30%';
+            }, 100);
+            setTimeout(() => {
+                progressFill.style.width = '60%';
+            }, 1000);
+            setTimeout(() => {
+                progressFill.style.width = '90%';
+            }, 3000);
+        }
 
         try {
             const requestBody = {
@@ -523,28 +550,64 @@ function initSingleForm() {
             const data = await response.json();
 
             if (data.success) {
-                resultDiv.innerHTML = `
-                    <div class="result-image">
-                        <img src="${data.url}" alt="${escapeHtml(data.prompt)}" onclick="openLightbox('${data.url}', '${escapeHtml(data.prompt)}')">
-                    </div>
-                    <div class="result-actions">
-                        <button class="btn btn-secondary" onclick="openLightbox('${data.url}', '${escapeHtml(data.prompt)}')">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
-                            </svg>
-                            查看大图
-                        </button>
-                        <button class="btn btn-secondary" onclick="downloadImage('${data.url}', '${data.filename}')">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                <path d="M7 10l5 5 5-5"/>
-                                <path d="M12 15V3"/>
-                            </svg>
-                            下载
-                        </button>
-                    </div>
-                `;
-                showToast('图片生成成功！', 'success');
+                // 完成进度条
+                if (progressFill) {
+                    progressFill.style.width = '100%';
+                }
+
+                // 显示文件命名对话框
+                showFilenameDialog(data.filename, async (finalFilename) => {
+                    // 如果文件名需要改变，调用重命名 API
+                    if (finalFilename !== data.filename) {
+                        try {
+                            const renameResponse = await fetch('/api/rename', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    old_filename: data.filename,
+                                    new_filename: finalFilename
+                                })
+                            });
+
+                            const renameData = await renameResponse.json();
+
+                            if (renameData.success) {
+                                // 更新显示的文件名和 URL
+                                data.filename = finalFilename;
+                                data.url = renameData.url;
+                            } else {
+                                showToast(`重命名失败: ${renameData.error}`, 'error');
+                            }
+                        } catch (error) {
+                            showToast(`重命名失败: ${error.message}`, 'error');
+                        }
+                    }
+
+                    // 显示结果
+                    resultDiv.innerHTML = `
+                        <div class="result-image">
+                            <img src="${data.url}" alt="${escapeHtml(data.prompt)}" onclick="openLightbox('${data.url}', '${escapeHtml(data.prompt)}')">
+                        </div>
+                        <div class="result-actions">
+                            <button class="btn btn-secondary" onclick="openLightbox('${data.url}', '${escapeHtml(data.prompt)}')">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                                </svg>
+                                查看大图
+                            </button>
+                            <button class="btn btn-secondary" onclick="downloadImage('${data.url}', '${data.filename}')">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <path d="M7 10l5 5 5-5"/>
+                                    <path d="M12 15V3"/>
+                                </svg>
+                                下载
+                            </button>
+                        </div>
+                    `;
+
+                    showToast('图片生成成功！', 'success');
+                });
             } else {
                 resultDiv.innerHTML = '';
                 showToast(`生成失败: ${data.error}`, 'error');
@@ -792,6 +855,88 @@ async function downloadImage(url, filename) {
     } catch (error) {
         showToast('下载失败', 'error');
     }
+}
+
+// 生成默认文件名（基于日期时间）
+function generateDefaultFilename() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}_${hours}${minutes}${seconds}.png`;
+}
+
+// 显示文件命名对话框
+function showFilenameDialog(currentFilename, onConfirm) {
+    const dialog = document.getElementById('filename-dialog');
+    const input = document.getElementById('filename-input');
+    const defaultSpan = document.getElementById('default-filename');
+    const confirmBtn = document.getElementById('filename-confirm');
+    const cancelBtn = document.getElementById('filename-cancel');
+
+    // 生成默认文件名
+    const defaultFilename = generateDefaultFilename();
+    defaultSpan.textContent = defaultFilename;
+
+    // 清空输入框
+    input.value = '';
+
+    // 显示对话框
+    dialog.classList.add('active');
+
+    // 聚焦输入框
+    setTimeout(() => input.focus(), 100);
+
+    // 确认按钮
+    const handleConfirm = () => {
+        const userFilename = input.value.trim();
+        const finalFilename = userFilename || defaultFilename;
+
+        // 确保文件名以 .png 结尾
+        if (!finalFilename.toLowerCase().endsWith('.png')) {
+            finalFilename += '.png';
+        }
+
+        dialog.classList.remove('active');
+
+        // 调用回调
+        if (onConfirm) {
+            onConfirm(finalFilename);
+        }
+    };
+
+    // 绑定确认按钮
+    confirmBtn.onclick = handleConfirm;
+
+    // 输入框回车确认
+    input.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+            handleConfirm();
+        }
+    };
+
+    // 取消按钮
+    cancelBtn.onclick = () => {
+        dialog.classList.remove('active');
+        // 取消时使用默认名称
+        if (onConfirm) {
+            onConfirm(defaultFilename);
+        }
+    };
+
+    // 点击背景关闭（使用默认名称）
+    dialog.addEventListener('click', function bgHandler(e) {
+        if (e.target === dialog || e.target.classList.contains('dialog-overlay')) {
+            dialog.classList.remove('active');
+            dialog.removeEventListener('click', bgHandler);
+            if (onConfirm) {
+                onConfirm(defaultFilename);
+            }
+        }
+    });
 }
 
 // 获取宽高比小数

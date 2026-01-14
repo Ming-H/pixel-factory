@@ -192,6 +192,58 @@ async def get_image(filename: str):
     return FileResponse(image_path)
 
 
+@app.post("/api/rename")
+async def rename_image(request: dict):
+    """
+    重命名图片文件
+
+    Args:
+        request: 包含 old_filename 和 new_filename 的请求
+
+    Returns:
+        重命名结果
+    """
+    old_filename = request.get("old_filename")
+    new_filename = request.get("new_filename")
+
+    if not old_filename or not new_filename:
+        raise HTTPException(status_code=400, detail="缺少文件名参数")
+
+    # 确保 .png 扩展名
+    if not new_filename.lower().endswith('.png'):
+        new_filename += '.png'
+
+    old_path = settings.OUTPUT_DIR / old_filename
+    new_path = settings.OUTPUT_DIR / new_filename
+
+    if not old_path.exists():
+        return {
+            "success": False,
+            "error": "原文件不存在"
+        }
+
+    # 如果新文件名已存在，添加时间戳
+    if new_path.exists() and new_path != old_path:
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        name_without_ext = new_filename.rsplit('.', 1)[0]
+        new_filename = f"{name_without_ext}_{timestamp}.png"
+        new_path = settings.OUTPUT_DIR / new_filename
+
+    try:
+        old_path.rename(new_path)
+        return {
+            "success": True,
+            "filename": new_filename,
+            "url": f"/api/images/{new_filename}"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(

@@ -354,6 +354,31 @@
         </div>
     </div>
 
+    <!-- 文件命名对话框 -->
+    <div id="filename-dialog" class="dialog">
+        <div class="dialog-overlay"></div>
+        <div class="dialog-content">
+            <h3 class="dialog-title">保存图片</h3>
+            <p class="dialog-description">为生成的图片命名</p>
+            <div class="dialog-form">
+                <div class="form-group">
+                    <label for="filename-input">文件名</label>
+                    <input type="text" id="filename-input" class="dialog-input" placeholder="留空使用默认名称">
+                    <div class="filename-hint">默认名称：<span id="default-filename"></span></div>
+                </div>
+            </div>
+            <div class="dialog-actions">
+                <button class="dialog-btn dialog-btn-primary" id="filename-confirm">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span>保存</span>
+                </button>
+            </div>
+            <button class="dialog-cancel" id="filename-cancel">取消</button>
+        </div>
+    </div>
+
     <!-- Toast 通知 -->
     <div id="toast" class="toast"></div>
 
