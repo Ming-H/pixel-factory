@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>{{ app_name }}</h1>
+            <p class="subtitle">基于 Gemini 3 Pro 的图像产出工厂</p>
+        </header>
+
+        <main>
+            <div class="generator-section">
+                <div class="tabs">
+                    <button class="tab active" data-tab="single">单张生成</button>
+                    <button class="tab" data-tab="batch">批量生成</button>
+                    <button class="tab" data-tab="history">历史记录</button>
+                </div>
+
+                <!-- 单张生成 -->
+                <div class="tab-content active" id="single-tab">
+                    <form id="single-form" class="form">
+                        <div class="form-group">
+                            <label for="prompt">提示词</label>
+                            <textarea
+                                id="prompt"
+                                name="prompt"
+                                placeholder="描述你想要生成的图片..."
+                                rows="3"
+                                required
+                            ></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="aspect-ratio">宽高比</label>
+                            <select id="aspect-ratio" name="aspect_ratio">
+                                {% for ratio in aspect_ratios %}
+                                <option value="{{ ratio }}">{{ ratio }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <span class="btn-text">生成图片</span>
+                            <span class="btn-loader"></span>
+                        </button>
+                    </form>
+
+                    <div id="single-result" class="result"></div>
+                </div>
+
+                <!-- 批量生成 -->
+                <div class="tab-content" id="batch-tab">
+                    <form id="batch-form" class="form">
+                        <div class="form-group">
+                            <label for="prompts">提示词（每行一个）</label>
+                            <textarea
+                                id="prompts"
+                                name="prompts"
+                                placeholder="第一张图片的提示词&#10;第二张图片的提示词&#10;第三张图片的提示词"
+                                rows="6"
+                                required
+                            ></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="batch-aspect-ratio">宽高比</label>
+                            <select id="batch-aspect-ratio" name="aspect_ratio">
+                                {% for ratio in aspect_ratios %}
+                                <option value="{{ ratio }}">{{ ratio }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <span class="btn-text">批量生成</span>
+                            <span class="btn-loader"></span>
+                        </button>
+                    </form>
+
+                    <div id="batch-result" class="result"></div>
+                </div>
+
+                <!-- 历史记录 -->
+                <div class="tab-content" id="history-tab">
+                    <div class="history-header">
+                        <h2>已生成的图片</h2>
+                        <button id="refresh-btn" class="btn btn-secondary">刷新</button>
+                    </div>
+                    <div id="history-list" class="history-grid"></div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Powered by Gemini 3 Pro Image Preview</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
