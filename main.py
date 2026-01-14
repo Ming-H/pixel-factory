@@ -1,4 +1,6 @@
 """Pixel Factory - 图像产出工厂"""
+from __future__ import annotations
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -85,7 +87,8 @@ async def generate_image(request: GenerateRequest):
 
     result = await generator.generate_image(
         prompt=request.prompt,
-        aspect_ratio=request.aspect_ratio
+        aspect_ratio=request.aspect_ratio,
+        reference_image=request.reference_image
     )
 
     if result["success"]:

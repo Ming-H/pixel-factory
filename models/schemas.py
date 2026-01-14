@@ -11,6 +11,10 @@ class GenerateRequest(BaseModel):
         description="图片宽高比",
         pattern="^(\\d+:\\d+)$"
     )
+    reference_image: Optional[str] = Field(
+        None,
+        description="参考图片的 base64 数据（可选）"
+    )
 
 
 class BatchGenerateRequest(BaseModel):

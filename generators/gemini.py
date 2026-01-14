@@ -24,7 +24,8 @@ class GeminiImageGenerator:
         self,
         prompt: str,
         aspect_ratio: str = "1:1",
-        filename: Optional[str] = None
+        filename: Optional[str] = None,
+        reference_image: Optional[str] = None
     ) -> dict:
         """
         生成单张图片
@@ -33,6 +34,7 @@ class GeminiImageGenerator:
             prompt: 提示词
             aspect_ratio: 宽高比，如 "1:1", "16:9", "9:16" 等
             filename: 输出文件名（可选）
+            reference_image: 参考图片的 base64 数据（可选）
 
         Returns:
             包含图片信息的字典
@@ -40,13 +42,31 @@ class GeminiImageGenerator:
         if aspect_ratio not in settings.ASPECT_RATIOS:
             raise ValueError(f"不支持的宽高比: {aspect_ratio}")
 
+        # 构建内容
+        if reference_image:
+            # 有参考图片时，组合图片和文本提示
+            # 解析 base64 数据（格式：data:image/png;base64,xxxxx）
+            if ',' in reference_image:
+                reference_image = reference_image.split(',', 1)[1]
+
+            contents = [
+                types.Part.from_bytes(
+                    data=reference_image,
+                    mime_type="image/png"
+                ),
+                f"参考这张图片的风格和形象，生成新图片：{prompt}"
+            ]
+        else:
+            # 没有参考图片时，只使用文本提示
+            contents = prompt
+
         # 在线程池中执行同步的 API 调用
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(
             None,
             lambda: self.client.models.generate_content(
                 model=self.model_name,
-                contents=prompt,
+                contents=contents,
                 config=types.GenerateContentConfig(
                     response_modalities=["IMAGE"],
                     image_config=types.ImageConfig(
