@@ -1,5 +1,6 @@
 """Gemini 图片生成器"""
 import asyncio
+import base64
 from pathlib import Path
 from typing import Optional
 
@@ -18,7 +19,8 @@ class GeminiImageGenerator:
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY 未设置")
         self.client = genai.Client(api_key=self.api_key)
-        self.model_name = settings.GEMINI_MODEL
+        # 使用 Gemini 3 Pro Image Preview 模型（Nano Banana Pro）
+        self.model_name = "gemini-3-pro-image-preview"
 
     async def generate_image(
         self,
@@ -42,68 +44,116 @@ class GeminiImageGenerator:
         if aspect_ratio not in settings.ASPECT_RATIOS:
             raise ValueError(f"不支持的宽高比: {aspect_ratio}")
 
-        # 构建内容
-        if reference_image:
-            # 有参考图片时，组合图片和文本提示
-            # 解析 base64 数据（格式：data:image/png;base64,xxxxx）
-            if ',' in reference_image:
-                reference_image = reference_image.split(',', 1)[1]
-
-            contents = [
-                types.Part.from_bytes(
-                    data=reference_image,
-                    mime_type="image/png"
-                ),
-                f"参考这张图片的风格和形象，生成新图片：{prompt}"
-            ]
-        else:
-            # 没有参考图片时，只使用文本提示
-            contents = prompt
-
-        # 在线程池中执行同步的 API 调用
         loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None,
-            lambda: self.client.models.generate_content(
-                model=self.model_name,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    response_modalities=["IMAGE"],
-                    image_config=types.ImageConfig(
-                        aspect_ratio=aspect_ratio,
-                    ),
-                ),
+
+        try:
+            # 构建内容列表
+            contents = []
+
+            # 构建完整的提示词
+            aspect_ratio_prompts = {
+                "1:1": "正方形 (1:1)",
+                "16:9": "横向宽屏 (16:9)",
+                "9:16": "竖向 (9:16)",
+                "4:3": "横向 (4:3)",
+                "3:4": "竖向 (3:4)",
+                "21:9": "超宽屏 (21:9)",
+                "9:21": "超长竖向 (9:21)"
+            }
+
+            # 如果有参考图片，先添加参考图片
+            if reference_image:
+                # 处理 base64 数据
+                if ',' in reference_image:
+                    reference_image = reference_image.split(',', 1)[1]
+
+                # 解码 base64
+                reference_image_bytes = base64.b64decode(reference_image)
+
+                # 添加参考图片部分
+                contents.append(
+                    types.Part.from_bytes(
+                        data=reference_image_bytes,
+                        mime_type="image/png"
+                    )
+                )
+
+                # 添加文本提示词
+                text_prompt = f"这是参考图片。请根据这个参考图片的风格和内容，生成一张新图片。描述：{prompt}。图片宽高比要求：{aspect_ratio_prompts.get(aspect_ratio, aspect_ratio)}。"
+                contents.append(types.Part(text=text_prompt))
+            else:
+                # 没有参考图片，直接使用提示词
+                text_prompt = f"请生成一张图片。描述：{prompt}。图片宽高比要求：{aspect_ratio_prompts.get(aspect_ratio, aspect_ratio)}。"
+                contents.append(types.Part(text=text_prompt))
+
+            # 配置响应为图片格式
+            config = types.GenerateContentConfig(
+                response_modalities=["IMAGE"]
             )
-        )
 
-        # 提取图片数据
-        if response.parts:
-            for part in response.parts:
-                if part.inline_data:
-                    image_data = part.inline_data.data
+            # 调用 Gemini 3 Pro Image Preview API
+            response = await loop.run_in_executor(
+                None,
+                lambda: self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=contents,
+                    config=config
+                )
+            )
 
-                    # 确定输出路径
-                    if filename:
-                        output_path = settings.OUTPUT_DIR / filename
-                    else:
-                        existing_count = len(list(settings.OUTPUT_DIR.glob('*.png')))
-                        output_path = settings.OUTPUT_DIR / f"image_{existing_count + 1}.png"
+            # 检查响应中的图片
+            if response.candidates and len(response.candidates) > 0:
+                candidate = response.candidates[0]
 
-                    # 保存图片
-                    output_path.write_bytes(image_data)
+                if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                    for part in candidate.content.parts:
+                        if hasattr(part, 'inline_data'):
+                            # inline_data 可能包含 bytes 或 base64 字符串
+                            inline_data = part.inline_data
 
-                    return {
-                        "success": True,
-                        "filename": output_path.name,
-                        "path": str(output_path),
-                        "prompt": prompt,
-                        "aspect_ratio": aspect_ratio
-                    }
+                            if hasattr(inline_data, 'data'):
+                                raw_data = inline_data.data
+
+                                # 处理数据（可能是 bytes 或 base64 字符串）
+                                if isinstance(raw_data, bytes):
+                                    image_data = raw_data
+                                elif isinstance(raw_data, str):
+                                    image_data = base64.b64decode(raw_data)
+                                else:
+                                    image_data = base64.b64decode(str(raw_data))
+
+                                if image_data:
+                                    return self._save_image(image_data, prompt, aspect_ratio, filename)
+
+        except Exception as e:
+            print(f"Gemini API failed: {e}")
+            import traceback
+            traceback.print_exc()
 
         return {
             "success": False,
-            "error": "未收到有效的响应",
+            "error": "无法生成图片，请检查 API 密钥和模型配置",
             "prompt": prompt
+        }
+
+    def _save_image(self, image_data: bytes, prompt: str, aspect_ratio: str, filename: Optional[str] = None) -> dict:
+        """保存图片并返回结果"""
+        # 确定输出路径
+        if filename:
+            output_path = settings.OUTPUT_DIR / filename
+        else:
+            existing_count = len(list(settings.OUTPUT_DIR.glob('*.png')))
+            output_path = settings.OUTPUT_DIR / f"image_{existing_count + 1}.png"
+
+        # 保存图片
+        output_path.write_bytes(image_data)
+
+        return {
+            "success": True,
+            "filename": output_path.name,
+            "path": str(output_path),
+            "prompt": prompt,
+            "aspect_ratio": aspect_ratio
         }
 
     async def generate_batch(

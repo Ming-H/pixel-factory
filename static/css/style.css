@@ -964,7 +964,9 @@ body {
 }
 
 .form-group label {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
     margin-bottom: var(--space-2);
     font-weight: var(--font-weight-semibold);
     font-size: var(--font-size-sm);
@@ -974,6 +976,47 @@ body {
 .hint {
     font-weight: var(--font-weight-normal);
     color: var(--color-text-tertiary);
+}
+
+/* Label Badge */
+.label-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--space-2);
+    background: linear-gradient(135deg, var(--color-primary), var(--accent-purple));
+    border-radius: var(--radius-sm);
+    font-size: 10px;
+    font-weight: var(--font-weight-semibold);
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.label-badge.secondary {
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-emerald));
+}
+
+/* Input Hint */
+.input-hint {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: rgba(6, 182, 212, 0.08);
+    border: 1px solid rgba(6, 182, 212, 0.2);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    color: var(--accent-cyan);
+}
+
+.input-hint svg {
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.input-hint span {
+    line-height: 1.4;
 }
 
 /* Textarea */
@@ -1420,18 +1463,95 @@ body {
     overflow: hidden;
     border: 1px solid var(--color-border-subtle);
     background: var(--color-bg-tertiary);
+    position: relative;
+}
+
+.result-image-container {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-xl);
 }
 
 .result-image img {
     width: 100%;
     height: auto;
     display: block;
+    cursor: zoom-in;
+    transition: transform var(--duration-slow) var(--ease-out);
+    max-width: 100%;
+}
+
+.result-image img.zoomed {
+    cursor: zoom-out;
+}
+
+/* Image Zoom Controls */
+.image-zoom-controls {
+    position: absolute;
+    bottom: var(--space-4);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    opacity: 0;
+    transition: opacity var(--duration-normal) var(--ease-out);
+}
+
+.result-image-container:hover .image-zoom-controls {
+    opacity: 1;
+}
+
+.zoom-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: var(--radius-full);
+    color: white;
     cursor: pointer;
-    transition: transform var(--duration-normal) var(--ease-out);
+    transition: all var(--duration-fast) var(--ease-out);
+}
+
+.zoom-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.zoom-btn:active {
+    transform: scale(0.95);
+}
+
+.zoom-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.zoom-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.zoom-level {
+    color: white;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    min-width: 48px;
+    text-align: center;
 }
 
 .result-image img:hover {
-    transform: scale(1.02);
+    transform: scale(1.01);
 }
 
 .result-actions {
@@ -2004,4 +2124,139 @@ body {
     .workspace {
         margin-left: 0;
     }
+}
+
+/* ====================
+   User Templates
+   ==================== */
+
+/* 保存模板按钮 */
+.btn-save-template {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-3);
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    transition: all var(--duration-fast) var(--ease-out);
+}
+
+.btn-save-template:hover {
+    background: var(--color-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-save-template svg {
+    flex-shrink: 0;
+}
+
+/* 用户模板列表 */
+.user-templates-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* 空模板提示 */
+.empty-templates {
+    text-align: center;
+    padding: var(--space-5) var(--space-3);
+    color: var(--color-text-tertiary);
+    font-size: var(--font-size-sm);
+}
+
+/* 用户模板项 */
+.user-template-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1);
+}
+
+.user-template-btn {
+    flex: 1;
+    padding: var(--space-3);
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    text-align: left;
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+}
+
+.user-template-btn:hover {
+    background: var(--color-primary-light);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    transform: translateX(2px);
+}
+
+.user-template-btn .template-name {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 模板操作按钮 */
+.template-actions {
+    display: flex;
+    gap: var(--space-1);
+}
+
+.template-action-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-tertiary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--duration-fast) var(--ease-out);
+}
+
+.template-action-btn:hover {
+    background: var(--color-error);
+    border-color: var(--color-error);
+    color: white;
+}
+
+.template-action-btn svg {
+    flex-shrink: 0;
+}
+
+/* 滚动条样式 */
+.user-templates-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.user-templates-list::-webkit-scrollbar-track {
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-sm);
+}
+
+.user-templates-list::-webkit-scrollbar-thumb {
+    background: var(--neutral-700);
+    border-radius: var(--radius-sm);
+}
+
+.user-templates-list::-webkit-scrollbar-thumb:hover {
+    background: var(--neutral-600);
 }

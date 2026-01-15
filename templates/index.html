@@ -111,6 +111,31 @@
                 </div>
             </div>
 
+            <!-- 我的模板 -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-header">
+                    <h3 class="sidebar-section-title">我的模板</h3>
+                    <button class="section-toggle expanded" data-target="user-templates-section">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="sidebar-section-content" id="user-templates-section">
+                    <button type="button" class="btn-save-template" id="save-template-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                            <path d="M17 21v-8H7v8"/>
+                            <path d="M7 3v5h8"/>
+                        </svg>
+                        保存当前提示词
+                    </button>
+                    <div class="user-templates-list" id="user-templates-list">
+                        <div class="empty-templates">暂无保存的模板</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 宽高比选择 -->
             <div class="sidebar-section">
                 <div class="sidebar-section-header">
@@ -178,7 +203,10 @@
 
                     <!-- 提示词输入 -->
                     <div class="form-group">
-                        <label for="prompt">提示词</label>
+                        <label for="prompt">
+                            <span>提示词</span>
+                            <span class="label-badge">核心描述</span>
+                        </label>
                         <div class="textarea-wrapper">
                             <textarea
                                 id="prompt"
@@ -188,12 +216,43 @@
                                 required
                             ></textarea>
                             <div class="prompt-actions">
-                                <button type="button" class="icon-btn" id="clear-prompt" title="清空">
+                                <button type="button" class="icon-btn" id="clear-prompt" title="清空提示词">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M18 6L6 18M6 6l12 12"/>
                                     </svg>
                                 </button>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- 文本内容输入 -->
+                    <div class="form-group">
+                        <label for="text-content">
+                            <span>文本内容</span>
+                            <span class="label-badge secondary">额外补充</span>
+                        </label>
+                        <div class="textarea-wrapper">
+                            <textarea
+                                id="text-content"
+                                name="text_content"
+                                placeholder="在此输入额外的文本内容，生成时将与提示词一起发送给 AI&#10;&#10;例如：画面中的文字、标语、对话内容等"
+                                rows="4"
+                            ></textarea>
+                            <div class="prompt-actions">
+                                <button type="button" class="icon-btn" id="clear-text-content" title="清空文本内容">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M18 6L6 18M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="input-hint">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 16v-4"/>
+                                <path d="M12 8h.01"/>
+                            </svg>
+                            <span>生成时提示词和文本内容将合并发送</span>
                         </div>
                     </div>
 
@@ -376,6 +435,30 @@
                 </button>
             </div>
             <button class="dialog-cancel" id="filename-cancel">取消</button>
+        </div>
+    </div>
+
+    <!-- 保存模板对话框 -->
+    <div id="save-template-dialog" class="dialog">
+        <div class="dialog-overlay"></div>
+        <div class="dialog-content">
+            <h3 class="dialog-title">保存为模板</h3>
+            <p class="dialog-description">为当前提示词命名，方便下次使用</p>
+            <div class="dialog-form">
+                <div class="form-group">
+                    <label for="template-name-input">模板名称</label>
+                    <input type="text" id="template-name-input" class="dialog-input" placeholder="例如：可爱猫咪风格" maxlength="50">
+                </div>
+            </div>
+            <div class="dialog-actions">
+                <button class="dialog-btn dialog-btn-primary" id="save-template-confirm">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span>保存</span>
+                </button>
+            </div>
+            <button class="dialog-cancel" id="save-template-cancel">取消</button>
         </div>
     </div>
 

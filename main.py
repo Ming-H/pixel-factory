@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 
 from config import settings
 from generators.gemini import GeminiImageGenerator
+from services.template_service import TemplateService
 from models.schemas import (
     GenerateRequest,
     GenerateResponse,
@@ -16,7 +17,11 @@ from models.schemas import (
     BatchGenerateResponse,
     ImagesListResponse,
     ImageInfo,
-    HealthResponse
+    HealthResponse,
+    CreateTemplateRequest,
+    TemplateListResponse,
+    TemplateResponse,
+    UserTemplate
 )
 
 
@@ -30,6 +35,8 @@ async def lifespan(app: FastAPI):
     global generator
     # 启动时初始化
     generator = GeminiImageGenerator()
+    # 初始化模板服务
+    app.state.template_service = TemplateService()
     yield
     # 关闭时清理
     generator = None
@@ -242,6 +249,69 @@ async def rename_image(request: dict):
             "success": False,
             "error": str(e)
         }
+
+
+# ===== 用户模板 API =====
+
+
+@app.post("/api/templates", response_model=TemplateResponse)
+async def create_template(request: CreateTemplateRequest):
+    """
+    创建新的用户模板
+
+    Args:
+        request: 创建模板请求
+
+    Returns:
+        创建结果
+    """
+    template_service = app.state.template_service
+    template = template_service.create_template(request)
+
+    return TemplateResponse(
+        success=True,
+        template=template
+    )
+
+
+@app.get("/api/templates", response_model=TemplateListResponse)
+async def get_templates():
+    """
+    获取所有用户模板
+
+    Returns:
+        模板列表
+    """
+    template_service = app.state.template_service
+    templates = template_service.get_templates()
+
+    return TemplateListResponse(
+        templates=templates,
+        total=len(templates)
+    )
+
+
+@app.delete("/api/templates/{template_id}", response_model=TemplateResponse)
+async def delete_template(template_id: str):
+    """
+    删除模板
+
+    Args:
+        template_id: 模板 ID
+
+    Returns:
+        删除结果
+    """
+    template_service = app.state.template_service
+    success = template_service.delete_template(template_id)
+
+    if success:
+        return TemplateResponse(success=True)
+    else:
+        return TemplateResponse(
+            success=False,
+            error="模板不存在"
+        )
 
 
 if __name__ == "__main__":

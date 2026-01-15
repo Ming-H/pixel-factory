@@ -10,7 +10,12 @@ const state = {
     referenceImageData: null,
     selectedStyle: null,
     selectedRatio: '1:1',
-    activeStyleCategory: null
+    activeStyleCategory: null,
+    userTemplates: [],
+    // 图片缩放状态
+    currentImageZoom: 100,
+    minZoom: 50,
+    maxZoom: 200
 };
 
 // DOM 加载完成后初始化
@@ -26,6 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initBatchForm();
     initLightbox();
     initRefreshButton();
+    initSaveTemplateButton();
+    initUserTemplates();
+    initImageZoom();
 });
 
 // 初始化标签切换
@@ -132,6 +140,16 @@ function initClearButtons() {
         clearPromptBtn.addEventListener('click', () => {
             promptTextarea.value = '';
             promptTextarea.focus();
+        });
+    }
+
+    // 清空文本内容
+    const clearTextContentBtn = document.getElementById('clear-text-content');
+    const textContentTextarea = document.getElementById('text-content');
+    if (clearTextContentBtn && textContentTextarea) {
+        clearTextContentBtn.addEventListener('click', () => {
+            textContentTextarea.value = '';
+            textContentTextarea.focus();
         });
     }
 
@@ -404,31 +422,61 @@ function initWithStyleSelector() {
             style: style
         };
 
+        // 清理旧的事件监听器（如果存在）
+        if (window.promptMergeDialogHandlers) {
+            window.promptMergeDialogHandlers.forEach(handler => {
+                if (handler.element && handler.event && handler.fn) {
+                    handler.element.removeEventListener(handler.event, handler.fn);
+                }
+            });
+        }
+
+        // 创建新的事件处理函数
+        const handlers = [];
+
         // 设置对话框按钮点击事件
         const dialogBtns = dialog.querySelectorAll('.dialog-btn');
         dialogBtns.forEach(btn => {
-            btn.onclick = () => {
+            const btnHandler = () => {
                 const action = btn.dataset.action;
                 if (action && window.handlePromptMerge) {
                     window.handlePromptMerge(action);
                 }
             };
+            btn.addEventListener('click', btnHandler);
+            handlers.push({ element: btn, event: 'click', fn: btnHandler });
         });
 
         // 设置取消按钮
         const cancelBtn = document.getElementById('dialog-cancel');
         if (cancelBtn) {
-            cancelBtn.onclick = () => {
-                dialog.classList.remove('active');
+            const cancelHandler = () => {
+                closeDialog();
             };
+            cancelBtn.addEventListener('click', cancelHandler);
+            handlers.push({ element: cancelBtn, event: 'click', fn: cancelHandler });
         }
 
         // 点击背景关闭
-        dialog.addEventListener('click', (e) => {
+        const bgClickHandler = (e) => {
             if (e.target === dialog || e.target.classList.contains('dialog-overlay')) {
-                dialog.classList.remove('active');
+                closeDialog();
             }
-        });
+        };
+        dialog.addEventListener('click', bgClickHandler);
+        handlers.push({ element: dialog, event: 'click', fn: bgClickHandler });
+
+        // 关闭对话框函数
+        function closeDialog() {
+            dialog.classList.remove('active');
+            // 清理事件监听器
+            handlers.forEach(handler => {
+                handler.element.removeEventListener(handler.event, handler.fn);
+            });
+        }
+
+        // 保存处理器引用供后续清理
+        window.promptMergeDialogHandlers = handlers;
     }
 
     // 处理提示词合并
@@ -464,8 +512,15 @@ function initWithStyleSelector() {
 
         promptTextarea.focus();
 
-        // 关闭对话框
-        document.getElementById('prompt-merge-dialog')?.classList.remove('active');
+        // 关闭对话框并清理事件监听器
+        const dialog = document.getElementById('prompt-merge-dialog');
+        if (dialog && window.promptMergeDialogHandlers) {
+            dialog.classList.remove('active');
+            window.promptMergeDialogHandlers.forEach(handler => {
+                handler.element.removeEventListener(handler.event, handler.fn);
+            });
+            window.promptMergeDialogHandlers = null;
+        }
 
         showToast('提示词已更新', 'success');
     };
@@ -478,17 +533,24 @@ function initSingleForm() {
         e.preventDefault();
 
         let prompt = document.getElementById('prompt').value.trim();
+        const textContent = document.getElementById('text-content').value.trim();
         const aspectRatio = document.getElementById('aspect-ratio').value;
         const resultDiv = document.getElementById('single-result');
 
-        if (!prompt) {
-            showToast('请输入提示词', 'error');
+        if (!prompt && !textContent) {
+            showToast('请输入提示词或文本内容', 'error');
             return;
         }
 
         // 移除提示词中的 --ar 标签（因为宽高比单独传递）
         const ratioPattern = /\s*--ar\s+\d+:\d+\s*$/g;
         prompt = prompt.replace(ratioPattern, '').trim();
+
+        // 合并提示词和文本内容
+        let finalPrompt = prompt;
+        if (textContent) {
+            finalPrompt = prompt ? `${prompt}。${textContent}` : textContent;
+        }
 
         // 查找生成按钮（在侧边栏中）
         const submitBtn = document.querySelector('.btn-generate');
@@ -532,7 +594,8 @@ function initSingleForm() {
 
         try {
             const requestBody = {
-                prompt: prompt,
+                prompt: finalPrompt,
+                text_content: textContent || null,
                 aspect_ratio: aspectRatio
             };
 
@@ -583,13 +646,39 @@ function initSingleForm() {
                         }
                     }
 
-                    // 显示结果
+                    // 显示结果（带缩放控制）
+                    const imageId = 'generated-img-' + Date.now();
                     resultDiv.innerHTML = `
                         <div class="result-image">
-                            <img src="${data.url}" alt="${escapeHtml(data.prompt)}" onclick="openLightbox('${data.url}', '${escapeHtml(data.prompt)}')">
+                            <div class="result-image-container" id="${imageId}-container">
+                                <img id="${imageId}" data-result-image="${imageId}" src="${data.url}" alt="${escapeHtml(finalPrompt)}">
+                                <div class="image-zoom-controls">
+                                    <button class="zoom-btn zoom-out" data-image-id="${imageId}" title="缩小">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="11" cy="11" r="8"/>
+                                            <path d="M21 21l-4.35-4.35"/>
+                                            <path d="M8 11h6"/>
+                                        </svg>
+                                    </button>
+                                    <span class="zoom-level" id="${imageId}-level">100%</span>
+                                    <button class="zoom-btn zoom-in" data-image-id="${imageId}" title="放大">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="11" cy="11" r="8"/>
+                                            <path d="M21 21l-4.35-4.35"/>
+                                            <path d="M11 8v6M8 11h6"/>
+                                        </svg>
+                                    </button>
+                                    <button class="zoom-btn zoom-reset" data-image-id="${imageId}" title="重置">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                            <path d="M3 3v5h5"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <div class="result-actions">
-                            <button class="btn btn-secondary" onclick="openLightbox('${data.url}', '${escapeHtml(data.prompt)}')">
+                            <button class="btn btn-secondary" onclick="openLightbox('${data.url}', '${escapeHtml(finalPrompt)}')">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
                                 </svg>
@@ -606,6 +695,8 @@ function initSingleForm() {
                         </div>
                     `;
 
+                    // 初始化该图片的缩放功能
+                    initImageZoomControls(imageId);
                     showToast('图片生成成功！', 'success');
                 });
             } else {
@@ -890,53 +981,58 @@ function showFilenameDialog(currentFilename, onConfirm) {
     // 聚焦输入框
     setTimeout(() => input.focus(), 100);
 
-    // 确认按钮
+    // 定义处理函数
     const handleConfirm = () => {
         const userFilename = input.value.trim();
-        const finalFilename = userFilename || defaultFilename;
+        let finalFilename = userFilename || defaultFilename;
 
         // 确保文件名以 .png 结尾
         if (!finalFilename.toLowerCase().endsWith('.png')) {
             finalFilename += '.png';
         }
 
+        closeDialogAndConfirm(finalFilename);
+    };
+
+    const handleCancel = () => {
+        closeDialogAndConfirm(defaultFilename);
+    };
+
+    const closeDialogAndConfirm = (filename) => {
+        // 移除所有事件监听器
+        confirmBtn.removeEventListener('click', confirmHandler);
+        cancelBtn.removeEventListener('click', cancelHandler);
+        input.removeEventListener('keydown', keydownHandler);
+        dialog.removeEventListener('click', bgClickHandler);
+
+        // 关闭对话框
         dialog.classList.remove('active');
 
         // 调用回调
         if (onConfirm) {
-            onConfirm(finalFilename);
+            onConfirm(filename);
         }
     };
 
-    // 绑定确认按钮
-    confirmBtn.onclick = handleConfirm;
-
-    // 输入框回车确认
-    input.onkeydown = (e) => {
+    // 创建事件处理函数（用于后续移除）
+    const confirmHandler = () => handleConfirm();
+    const cancelHandler = () => handleCancel();
+    const keydownHandler = (e) => {
         if (e.key === 'Enter') {
             handleConfirm();
         }
     };
-
-    // 取消按钮
-    cancelBtn.onclick = () => {
-        dialog.classList.remove('active');
-        // 取消时使用默认名称
-        if (onConfirm) {
-            onConfirm(defaultFilename);
+    const bgClickHandler = (e) => {
+        if (e.target === dialog || e.target.classList.contains('dialog-overlay')) {
+            handleCancel();
         }
     };
 
-    // 点击背景关闭（使用默认名称）
-    dialog.addEventListener('click', function bgHandler(e) {
-        if (e.target === dialog || e.target.classList.contains('dialog-overlay')) {
-            dialog.classList.remove('active');
-            dialog.removeEventListener('click', bgHandler);
-            if (onConfirm) {
-                onConfirm(defaultFilename);
-            }
-        }
-    });
+    // 绑定事件监听器
+    confirmBtn.addEventListener('click', confirmHandler);
+    cancelBtn.addEventListener('click', cancelHandler);
+    input.addEventListener('keydown', keydownHandler);
+    dialog.addEventListener('click', bgClickHandler);
 }
 
 // 获取宽高比小数
@@ -950,4 +1046,388 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// ===== 用户模板功能 =====
+
+// 初始化保存模板按钮
+function initSaveTemplateButton() {
+    const saveBtn = document.getElementById('save-template-btn');
+    const dialog = document.getElementById('save-template-dialog');
+    const confirmBtn = document.getElementById('save-template-confirm');
+    const cancelBtn = document.getElementById('save-template-cancel');
+    const nameInput = document.getElementById('template-name-input');
+
+    saveBtn?.addEventListener('click', () => {
+        const promptTextarea = document.getElementById('prompt');
+        const textContentTextarea = document.getElementById('text-content');
+        const currentPrompt = promptTextarea?.value.trim();
+        const currentTextContent = textContentTextarea?.value.trim() || '';
+
+        if (!currentPrompt && !currentTextContent) {
+            showToast('请先输入提示词或文本内容', 'error');
+            return;
+        }
+
+        dialog.classList.add('active');
+        nameInput.value = '';
+        setTimeout(() => nameInput.focus(), 100);
+    });
+
+    const handleSave = async () => {
+        const promptTextarea = document.getElementById('prompt');
+        const textContentTextarea = document.getElementById('text-content');
+        const currentPrompt = promptTextarea?.value.trim() || '';
+        const currentTextContent = textContentTextarea?.value.trim() || '';
+        const templateName = nameInput.value.trim();
+
+        if (!templateName) {
+            showToast('请输入模板名称', 'error');
+            nameInput.focus();
+            return;
+        }
+
+        // 合并提示词和文本内容用于保存
+        let combinedPrompt = currentPrompt;
+        if (currentTextContent) {
+            combinedPrompt = currentPrompt ? `${currentPrompt}。${currentTextContent}` : currentTextContent;
+        }
+
+        try {
+            const response = await fetch('/api/templates', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: templateName,
+                    prompt: combinedPrompt,
+                    // 额外保存原始的提示词和文本内容，用于恢复
+                    prompt_only: currentPrompt,
+                    text_content: currentTextContent
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showToast('模板已保存', 'success');
+                dialog.classList.remove('active');
+                loadUserTemplates();
+            } else {
+                showToast(`保存失败: ${data.error}`, 'error');
+            }
+        } catch (error) {
+            showToast(`保存失败: ${error.message}`, 'error');
+        }
+    };
+
+    confirmBtn?.addEventListener('click', handleSave);
+
+    nameInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            handleSave();
+        }
+    });
+
+    cancelBtn?.addEventListener('click', () => {
+        dialog.classList.remove('active');
+    });
+
+    dialog?.addEventListener('click', (e) => {
+        if (e.target === dialog || e.target.classList.contains('dialog-overlay')) {
+            dialog.classList.remove('active');
+        }
+    });
+}
+
+// 初始化用户模板功能
+function initUserTemplates() {
+    loadUserTemplates();
+}
+
+// 加载用户模板列表
+async function loadUserTemplates() {
+    const templatesList = document.getElementById('user-templates-list');
+
+    try {
+        const response = await fetch('/api/templates');
+        const data = await response.json();
+
+        state.userTemplates = data.templates || [];
+
+        if (state.userTemplates.length === 0) {
+            templatesList.innerHTML = '<div class="empty-templates">暂无保存的模板</div>';
+            return;
+        }
+
+        templatesList.innerHTML = state.userTemplates.map(template => `
+            <div class="user-template-item" data-template-id="${template.id}">
+                <button type="button" class="user-template-btn" data-template-id="${template.id}" title="点击应用模板">
+                    <span class="template-name">${escapeHtml(template.name)}</span>
+                </button>
+                <div class="template-actions">
+                    <button type="button" class="template-action-btn delete-template" data-template-id="${template.id}" title="删除模板">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        bindUserTemplateEvents();
+
+    } catch (error) {
+        templatesList.innerHTML = `<div class="empty-templates">加载失败: ${error.message}</div>`;
+    }
+}
+
+// 绑定用户模板事件
+function bindUserTemplateEvents() {
+    const templatesList = document.getElementById('user-templates-list');
+
+    const templateBtns = templatesList.querySelectorAll('.user-template-btn');
+    templateBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const templateId = btn.dataset.templateId;
+            const template = state.userTemplates.find(t => t.id === templateId);
+
+            if (template) {
+                applyUserTemplate(template);
+            }
+        });
+    });
+
+    const deleteBtns = templatesList.querySelectorAll('.delete-template');
+    deleteBtns.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const templateId = btn.dataset.templateId;
+
+            if (confirm('确定要删除这个模板吗？')) {
+                await deleteUserTemplate(templateId);
+            }
+        });
+    });
+}
+
+// 应用用户模板
+function applyUserTemplate(template) {
+    const promptTextarea = document.getElementById('prompt');
+    const currentPrompt = promptTextarea?.value.trim() || '';
+
+    if (currentPrompt) {
+        showPromptMergeDialogForTemplate(currentPrompt, template);
+    } else {
+        if (promptTextarea) {
+            promptTextarea.value = template.prompt;
+            promptTextarea.focus();
+            showToast(`已应用模板: ${template.name}`, 'success');
+        }
+    }
+}
+
+// 显示模板提示词合并对话框
+function showPromptMergeDialogForTemplate(currentPrompt, template) {
+    const dialog = document.getElementById('prompt-merge-dialog');
+    if (!dialog) return;
+
+    dialog.classList.add('active');
+
+    window.promptMergeState = {
+        current: currentPrompt,
+        template: template
+    };
+
+    // 清理旧的事件监听器（如果存在）
+    if (window.promptMergeTemplateDialogHandlers) {
+        window.promptMergeTemplateDialogHandlers.forEach(handler => {
+            if (handler.element && handler.event && handler.fn) {
+                handler.element.removeEventListener(handler.event, handler.fn);
+            }
+        });
+    }
+
+    // 创建新的事件处理函数
+    const handlers = [];
+
+    const dialogBtns = dialog.querySelectorAll('.dialog-btn');
+    dialogBtns.forEach(btn => {
+        const btnHandler = () => {
+            const action = btn.dataset.action;
+            handlePromptMergeForTemplate(action);
+            closeDialog();
+        };
+        btn.addEventListener('click', btnHandler);
+        handlers.push({ element: btn, event: 'click', fn: btnHandler });
+    });
+
+    const cancelBtn = document.getElementById('dialog-cancel');
+    if (cancelBtn) {
+        const cancelHandler = () => {
+            closeDialog();
+        };
+        cancelBtn.addEventListener('click', cancelHandler);
+        handlers.push({ element: cancelBtn, event: 'click', fn: cancelHandler });
+    }
+
+    const bgClickHandler = (e) => {
+        if (e.target === dialog || e.target.classList.contains('dialog-overlay')) {
+            closeDialog();
+        }
+    };
+    dialog.addEventListener('click', bgClickHandler);
+    handlers.push({ element: dialog, event: 'click', fn: bgClickHandler });
+
+    // 关闭对话框函数
+    function closeDialog() {
+        dialog.classList.remove('active');
+        // 清理事件监听器
+        handlers.forEach(handler => {
+            handler.element.removeEventListener(handler.event, handler.fn);
+        });
+    }
+
+    // 保存处理器引用供后续清理
+    window.promptMergeTemplateDialogHandlers = handlers;
+}
+
+// 处理模板提示词合并
+function handlePromptMergeForTemplate(action) {
+    const { current, template } = window.promptMergeState || {};
+    const promptTextarea = document.getElementById('prompt');
+
+    if (!promptTextarea) return;
+
+    const ratioPattern = /\s*--ar\s+\d+:\d+\s*$/g;
+    const cleanedCurrent = current.replace(ratioPattern, '').trim();
+
+    let newPrompt = '';
+    switch (action) {
+        case 'replace':
+            newPrompt = template.prompt;
+            break;
+        case 'append':
+            newPrompt = `${cleanedCurrent}, ${template.prompt}`;
+            break;
+        case 'prepend':
+            newPrompt = `${template.prompt}, ${cleanedCurrent}`;
+            break;
+    }
+
+    promptTextarea.value = newPrompt;
+
+    if (state.selectedRatio) {
+        addRatioToPrompt(state.selectedRatio);
+    }
+
+    promptTextarea.focus();
+
+    // 关闭对话框并清理事件监听器
+    const dialog = document.getElementById('prompt-merge-dialog');
+    if (dialog && window.promptMergeTemplateDialogHandlers) {
+        dialog.classList.remove('active');
+        window.promptMergeTemplateDialogHandlers.forEach(handler => {
+            handler.element.removeEventListener(handler.event, handler.fn);
+        });
+        window.promptMergeTemplateDialogHandlers = null;
+    }
+
+    showToast(`已应用模板: ${template.name}`, 'success');
+}
+
+// 删除用户模板
+async function deleteUserTemplate(templateId) {
+    try {
+        const response = await fetch(`/api/templates/${templateId}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showToast('模板已删除', 'success');
+            loadUserTemplates();
+        } else {
+            showToast(`删除失败: ${data.error}`, 'error');
+        }
+    } catch (error) {
+        showToast(`删除失败: ${error.message}`, 'error');
+    }
+}
+
+// ===== 图片缩放功能 =====
+
+// 初始化图片缩放功能（全局初始化）
+function initImageZoom() {
+    // 这里可以添加全局的图片缩放相关初始化
+    // 目前主要通过 initImageZoomControls 为每个生成的图片单独初始化
+}
+
+// 初始化单个图片的缩放控件
+function initImageZoomControls(imageId) {
+    const container = document.getElementById(`${imageId}-container`);
+    const img = document.getElementById(imageId);
+    const zoomOutBtn = container.querySelector('.zoom-out');
+    const zoomInBtn = container.querySelector('.zoom-in');
+    const zoomResetBtn = container.querySelector('.zoom-reset');
+    const zoomLevelSpan = document.getElementById(`${imageId}-level`);
+
+    // 为该图片创建独立的缩放状态
+    const imageState = {
+        zoom: 100,
+        minZoom: state.minZoom,
+        maxZoom: state.maxZoom
+    };
+
+    // 更新图片缩放
+    function updateZoom(newZoom) {
+        imageState.zoom = Math.max(imageState.minZoom, Math.min(imageState.maxZoom, newZoom));
+        img.style.transform = `scale(${imageState.zoom / 100})`;
+        zoomLevelSpan.textContent = `${imageState.zoom}%`;
+
+        // 更新按钮状态
+        zoomOutBtn.disabled = imageState.zoom <= imageState.minZoom;
+        zoomInBtn.disabled = imageState.zoom >= imageState.maxZoom;
+
+        // 添加/移除 zoomed 类
+        if (imageState.zoom > 100) {
+            img.classList.add('zoomed');
+        } else {
+            img.classList.remove('zoomed');
+        }
+    }
+
+    // 缩小按钮
+    zoomOutBtn.addEventListener('click', () => {
+        updateZoom(imageState.zoom - 25);
+    });
+
+    // 放大按钮
+    zoomInBtn.addEventListener('click', () => {
+        updateZoom(imageState.zoom + 25);
+    });
+
+    // 重置按钮
+    zoomResetBtn.addEventListener('click', () => {
+        updateZoom(100);
+    });
+
+    // 点击图片切换缩放
+    img.addEventListener('click', () => {
+        if (imageState.zoom === 100) {
+            updateZoom(150);
+        } else {
+            updateZoom(100);
+        }
+    });
+
+    // 鼠标滚轮缩放
+    container.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -25 : 25;
+        updateZoom(imageState.zoom + delta);
+    }, { passive: false });
+
+    // 初始化状态
+    updateZoom(100);
 }
